@@ -1,6 +1,9 @@
 package pkg
 
-import "net"
+import (
+	"fmt"
+	"net"
+)
 
 // func GetOwnMac(ifi string) (string, error) {
 func GetOwnMac(ifi *net.Interface) (string, error) {
@@ -9,6 +12,7 @@ func GetOwnMac(ifi *net.Interface) (string, error) {
 	// 	return "", err
 	// }
 
+	fmt.Println("Mac: ", ifi.HardwareAddr.String())
 	return ifi.HardwareAddr.String(), nil
 }
 
@@ -43,5 +47,18 @@ func GetMac() (map[string]string, error) {
 }
 
 func GetOwnIP(ifi *net.Interface) (string, error) {
+	addrs, err := ifi.Addrs()
+	if err != nil {
+		return "", err
+	}
 
+	for _, addr := range addrs {
+		if ipNet, ok := addr.(*net.IPNet); ok {
+			if ipNet.IP.To4() != nil {
+				fmt.Println("IP: ", ipNet.IP.String())
+				return ipNet.String(), nil
+			}
+		}
+	}
+	return "", fmt.Errorf("Did not find any ip address\n")
 }

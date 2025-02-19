@@ -2,6 +2,7 @@ package pkg
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 	"os/user"
 	"path/filepath"
@@ -43,6 +44,12 @@ func SaveConf(conf *Config) error {
 func LoadConf() (*Config, error) {
 	path := confPath()
 
+	_, err := os.Stat(path)
+	fmt.Println("Config exists: ", err == nil)
+	if err != nil {
+		return nil, fmt.Errorf("Config file does not exist\n")
+	}
+
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return nil, err
@@ -53,5 +60,5 @@ func LoadConf() (*Config, error) {
 		return nil, err
 	}
 
-	return &conf, err
+	return &conf, nil
 }
