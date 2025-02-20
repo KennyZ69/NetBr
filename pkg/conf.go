@@ -3,16 +3,19 @@ package pkg
 import (
 	"encoding/json"
 	"fmt"
+	"net"
 	"os"
 	"os/user"
 	"path/filepath"
 )
 
-// config holds the user's data used by Kenny's networking tools
+// Config holds the user's data used by Kenny's networking tools
 type Config struct {
-	NetIfi  string `json:"interface"`
-	LocalIP string `json:"local_ip"`
-	Mac     string `json:"mac"`
+	// NetIfi  string     `json:"interface"` // local network interface
+	NetIfi  *net.Interface `json:"interface"` // local network interface
+	LocalIP string         `json:"local_ip"`  // users (attackers) local IP
+	Mac     string         `json:"mac"`       // users (attackers) actual MAC address
+	CIDR    *net.IPNet     `json:"cidr"`      // the IP range on network
 	// may add more fields throughout the development process
 	path string
 }
@@ -45,7 +48,7 @@ func LoadConf() (*Config, error) {
 	path := confPath()
 
 	_, err := os.Stat(path)
-	fmt.Println("Config exists: ", err == nil)
+	// fmt.Println("Config exists: ", err == nil)
 	if err != nil {
 		return nil, fmt.Errorf("Config file does not exist\n")
 	}

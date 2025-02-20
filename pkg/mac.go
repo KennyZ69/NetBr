@@ -3,6 +3,9 @@ package pkg
 import (
 	"fmt"
 	"net"
+	"time"
+
+	"github.com/mdlayher/arp"
 )
 
 // func GetOwnMac(ifi string) (string, error) {
@@ -12,53 +15,57 @@ func GetOwnMac(ifi *net.Interface) (string, error) {
 	// 	return "", err
 	// }
 
-	fmt.Println("Mac: ", ifi.HardwareAddr.String())
 	return ifi.HardwareAddr.String(), nil
 }
 
-func GetMac() (map[string]string, error) {
-	ifis, err := net.Interfaces()
+func ArpScan(ifi *net.Interface, ipNet *net.IPNet) (map[string]string, error) {
+
+	c, err := arp.Dial(ifi)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("could not dial arp client: %s\n", err)
 	}
+	defer c.Close()
 
 	// make a map for the mac : ip relations
 	ret := make(map[string]string)
 
-	for _, ifi := range ifis {
-		mac := ifi.HardwareAddr.String()
-		if mac != "" {
-		}
-		addrs, err := ifi.Addrs()
-		if err != nil {
+	for ip := ipNet.IP.Mask(ipNet.Mask); ipNet.Contains(ip); incIP(ip) {
+		if ip.Equal(ipNet.IP) {
 			continue
-			// return nil, err
 		}
 
-		for _, addr := range addrs {
-			switch addr.(type) {
-			case *net.IPAddr:
-				ret[mac] = addr.String()
-			}
+		nIP, err := netipIP(&ip)
+		if err != nil {
+			return nil, err
 		}
+
+		mac, err := c.Resolve(*nIP)
+		if err != nil {
+			continue
+		}
+
+		ret[ip.String()] = mac.String()
+		fmt.Printf("Found %s : %s\n", ip.String(), mac.String())
+
+		time.Sleep(50 * time.Millisecond)
 	}
 
 	return ret, nil
 }
 
-func GetOwnIP(ifi *net.Interface) (string, error) {
+// GetIpRange iterates over ip addresses and returns the first one along with the CIDR notation
+func GetIpRange(ifi *net.Interface) (string, *net.IPNet, error) {
 	addrs, err := ifi.Addrs()
 	if err != nil {
-		return "", err
+		return "", nil, err
 	}
 
 	for _, addr := range addrs {
-		if ipNet, ok := addr.(*net.IPNet); ok {
+		if ipNet, ok := addr.(*net.IPNet); ok && !ipNet.IP.IsLoopback() {
 			if ipNet.IP.To4() != nil {
-				fmt.Println("IP: ", ipNet.IP.String())
-				return ipNet.String(), nil
+				return ipNet.IP.String(), ipNet, nil
 			}
 		}
 	}
-	return "", fmt.Errorf("Did not find any ip address\n")
+	return "", nil, fmt.Errorf("Did not find any ip address\n")
 }
