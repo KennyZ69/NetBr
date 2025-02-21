@@ -16,7 +16,11 @@ func netipIP(ip *net.IP) (*netip.Addr, error) {
 	return &ret, nil
 }
 
-// TODO
 func incIP(ip net.IP) {
-
+	for i := len(ip) - 1; i >= 0; i-- {
+		ip[i]++
+		if ip[i] > 0 {
+			break
+		}
+	}
 }

@@ -8,13 +8,7 @@ import (
 	"github.com/mdlayher/arp"
 )
 
-// func GetOwnMac(ifi string) (string, error) {
 func GetOwnMac(ifi *net.Interface) (string, error) {
-	// netIfi, err := net.InterfaceByName(ifi)
-	// if err != nil {
-	// 	return "", err
-	// }
-
 	return ifi.HardwareAddr.String(), nil
 }
 

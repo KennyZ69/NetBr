@@ -46,4 +46,10 @@ func main() {
 	fmt.Printf("Gotten mac: %s\n", cfg.Mac)
 	fmt.Printf("Gotten CIDR: %s\n", cfg.CIDR)
 
+	macMap, err := pkg.ArpScan(cfg.NetIfi, cfg.CIDR)
+	if err != nil {
+		log.Fatalf("Error getting mac to ip map of addresses: %s\n", err)
+	}
+
+	fmt.Println(macMap)
 }
