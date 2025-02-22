@@ -53,11 +53,12 @@ func main() {
 	fmt.Printf("Gotten CIDR: %s\n", cfg.CIDR)
 	fmt.Printf("Gotten Gateway IP: %s\n", cfg.Gateway.String())
 
-	// macMap, err := pkg.ArpScan(cfg.NetIfi, cfg.CIDR)
-	// if err != nil {
-	// 	log.Fatalf("Error getting mac to ip map of addresses: %s\n", err)
-	// }
-	//
-	// fmt.Println(macMap)
+	_, err = pkg.ListIPs(cfg.CIDR, cfg.NetIfi)
+	if err != nil {
+		log.Fatalf("Error in the ListIPs func: %s\n", err)
+	}
 
+	// TODO:
+	// Now I could print out the active IP addresses and let the attacker choose which one to intercept
+	// so I can ping the ips using my netlibk and map its corresponding mac to it
 }
