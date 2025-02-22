@@ -12,11 +12,15 @@ import (
 // Config holds the user's data used by Kenny's networking tools
 type Config struct {
 	// NetIfi  string     `json:"interface"` // local network interface
+
 	NetIfi  *net.Interface `json:"interface"` // local network interface
 	LocalIP string         `json:"local_ip"`  // users (attackers) local IP
 	Mac     string         `json:"mac"`       // users (attackers) actual MAC address
 	CIDR    *net.IPNet     `json:"cidr"`      // the IP range on network
+	Gateway net.IP         `json:"gateway"`   // the gateway IP
+
 	// may add more fields throughout the development process
+
 	path string
 }
 

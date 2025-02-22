@@ -2,6 +2,7 @@ package pkg
 
 import (
 	"fmt"
+	"log"
 	"net"
 	"time"
 
@@ -19,6 +20,8 @@ func ArpScan(ifi *net.Interface, ipNet *net.IPNet) (map[string]string, error) {
 		return nil, fmt.Errorf("could not dial arp client: %s\n", err)
 	}
 	defer c.Close()
+
+	log.Println("Dialed the arp client")
 
 	// make a map for the mac : ip relations
 	ret := make(map[string]string)
@@ -47,19 +50,20 @@ func ArpScan(ifi *net.Interface, ipNet *net.IPNet) (map[string]string, error) {
 	return ret, nil
 }
 
-// GetIpRange iterates over ip addresses and returns the first one along with the CIDR notation
-func GetIpRange(ifi *net.Interface) (string, *net.IPNet, error) {
-	addrs, err := ifi.Addrs()
-	if err != nil {
-		return "", nil, err
-	}
-
-	for _, addr := range addrs {
-		if ipNet, ok := addr.(*net.IPNet); ok && !ipNet.IP.IsLoopback() {
-			if ipNet.IP.To4() != nil {
-				return ipNet.IP.String(), ipNet, nil
-			}
-		}
-	}
-	return "", nil, fmt.Errorf("Did not find any ip address\n")
-}
+// TODO:
+// finish these possible implementations or the arp mapping
+// func ScanARP(ifi *net.Interface) error {
+// 	handle, err := pcap.OpenLive(ifi.Name, 65536, true, pcap.BlockForever)
+// 	if err != nil {
+// 		return err
+// 	}
+// 	defer handle.Close()
+//
+// 	stop := make(chan struct{})
+// 	go readARP(handle, ifi, stop)
+// 	defer close(stop)
+// }
+//
+// func readARP(handle *pcap.Handle, ifi *net.Interface, stop chan struct{}) {
+// 	src := gopacket.NewPacketSource(handle, layers.LayerTypeEthernet)
+// }

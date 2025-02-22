@@ -30,11 +30,17 @@ func main() {
 			log.Fatalf("Error: Could not get local ip address: %s\n", err)
 		}
 
+		gateway, err := pkg.GetGateway()
+		if err != nil && gateway == nil {
+			log.Fatalf("Error: Could not get the Gateway IP address: %s\n", err)
+		}
+
 		cfg = &pkg.Config{
 			NetIfi:  ifi,
 			LocalIP: ip,
 			Mac:     ownMac,
 			CIDR:    cidr,
+			Gateway: gateway,
 		}
 		if err = pkg.SaveConf(cfg); err != nil {
 			log.Fatalf("Error saving config file: %s\n", err)
@@ -45,11 +51,13 @@ func main() {
 	fmt.Printf("Gotten ip: %s\n", cfg.LocalIP)
 	fmt.Printf("Gotten mac: %s\n", cfg.Mac)
 	fmt.Printf("Gotten CIDR: %s\n", cfg.CIDR)
+	fmt.Printf("Gotten Gateway IP: %s\n", cfg.Gateway.String())
 
-	macMap, err := pkg.ArpScan(cfg.NetIfi, cfg.CIDR)
-	if err != nil {
-		log.Fatalf("Error getting mac to ip map of addresses: %s\n", err)
-	}
+	// macMap, err := pkg.ArpScan(cfg.NetIfi, cfg.CIDR)
+	// if err != nil {
+	// 	log.Fatalf("Error getting mac to ip map of addresses: %s\n", err)
+	// }
+	//
+	// fmt.Println(macMap)
 
-	fmt.Println(macMap)
 }

@@ -1,8 +1,10 @@
 package pkg
 
 import (
+	"io"
 	"net"
 	"net/netip"
+	"os"
 )
 
 func netipIP(ip *net.IP) (*netip.Addr, error) {
@@ -23,4 +25,19 @@ func incIP(ip net.IP) {
 			break
 		}
 	}
+}
+
+func readFile(file string) ([]byte, error) {
+	f, err := os.Open(file) // this opens the file just for reading
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+
+	bytes, err := io.ReadAll(f)
+	if err != nil {
+		return nil, err
+	}
+
+	return bytes, nil
 }
