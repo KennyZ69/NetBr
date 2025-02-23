@@ -53,8 +53,9 @@ func main() {
 	fmt.Printf("Gotten CIDR: %s\n", cfg.CIDR)
 	fmt.Printf("Gotten Gateway IP: %s\n", cfg.Gateway.String())
 
-	_, err = pkg.ListIPs(cfg.CIDR, cfg.NetIfi)
-	if err != nil {
+	// _, err = pkg.ListIPs(cfg.CIDR, cfg.NetIfi)
+	activeIPs, err := pkg.HighListIPs(cfg.CIDR, cfg.NetIfi)
+	if err != nil || activeIPs == nil {
 		log.Fatalf("Error in the ListIPs func: %s\n", err)
 	}
 

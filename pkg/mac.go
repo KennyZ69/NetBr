@@ -50,6 +50,26 @@ func ArpScan(ifi *net.Interface, ipNet *net.IPNet) (map[string]string, error) {
 	return ret, nil
 }
 
+func GetMacFromIP(ip net.IP, ifi *net.Interface) (net.HardwareAddr, error) {
+	c, err := arp.Dial(ifi)
+	if err != nil {
+		return nil, err
+	}
+	defer c.Close()
+
+	nIP, err := netipIP(&ip)
+	if err != nil {
+		return nil, fmt.Errorf("could not convert net.IP to netip.Addr: %s\n", err)
+	}
+
+	mac, err := c.Resolve(*nIP)
+	if err != nil {
+		return nil, err
+	}
+
+	return mac, nil
+}
+
 // TODO:
 // finish these possible implementations or the arp mapping
 // func ScanARP(ifi *net.Interface) error {

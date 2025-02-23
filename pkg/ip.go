@@ -32,6 +32,10 @@ func ICMPClient(ifi *net.Interface) (*netlibk.Client, error) {
 	return c, nil
 }
 
+// TODO:
+// I need to print out the list of active IP adresses
+// and let the user type in one of them to attack
+
 func ListIPs(cidr *net.IPNet, ifi *net.Interface) ([]net.IP, error) {
 	c, err := ICMPClient(ifi)
 	if err != nil {
@@ -39,6 +43,7 @@ func ListIPs(cidr *net.IPNet, ifi *net.Interface) ([]net.IP, error) {
 	}
 
 	var activeIPs []net.IP
+	var count int = 0
 
 	for ip := cidr.IP.Mask(cidr.Mask); cidr.Contains(ip); incIP(ip) {
 		if ip.Equal(cidr.IP) {
@@ -51,9 +56,35 @@ func ListIPs(cidr *net.IPNet, ifi *net.Interface) ([]net.IP, error) {
 		}
 
 		if active {
+			count++
+			activeIPs = append(activeIPs, ip)
+			log.Printf("Found active IP: %s (%d)\n", ip.String(), count)
+		}
+	}
+
+	return activeIPs, nil
+}
+
+func HighListIPs(cidr *net.IPNet, ifi *net.Interface) ([]net.IP, error) {
+	var activeIPs []net.IP
+
+	for ip := cidr.IP.Mask(cidr.Mask); cidr.Contains(ip); incIP(ip) {
+		if ip.Equal(cidr.IP) {
+			continue
+		}
+		_, active, err := netlibk.HigherLvlPing(ip, []byte("Hello victim!"), time.Duration(2))
+		if err != nil {
+			continue
+		}
+
+		if active {
 			activeIPs = append(activeIPs, ip)
 			log.Printf("Found active IP: %s\n", ip.String())
 		}
+	}
+
+	if len(activeIPs) == 0 {
+		return nil, fmt.Errorf("No active IPs found on the network\n")
 	}
 
 	return activeIPs, nil
