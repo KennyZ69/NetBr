@@ -57,7 +57,7 @@ func LoadConf() (*Config, error) {
 		return nil, fmt.Errorf("Config file does not exist\n")
 	}
 
-	data, err := os.ReadFile(path)
+	data, err := ReadFile(path)
 	if err != nil {
 		return nil, err
 	}

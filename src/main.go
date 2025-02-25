@@ -5,6 +5,7 @@ import (
 	"log"
 
 	"github.com/KennyZ69/netBr/pkg"
+	ipkg "github.com/KennyZ69/netBr/pkg/ip"
 )
 
 func main() {
@@ -25,12 +26,12 @@ func main() {
 		}
 
 		// log.Println("Getting IP")
-		ip, cidr, err := pkg.GetIpRange(ifi)
+		ip, cidr, err := ipkg.GetIpRange(ifi)
 		if err != nil {
 			log.Fatalf("Error: Could not get local ip address: %s\n", err)
 		}
 
-		gateway, err := pkg.GetGateway()
+		gateway, err := ipkg.GetGateway()
 		if err != nil && gateway == nil {
 			log.Fatalf("Error: Could not get the Gateway IP address: %s\n", err)
 		}
@@ -53,11 +54,22 @@ func main() {
 	fmt.Printf("Gotten CIDR: %s\n", cfg.CIDR)
 	fmt.Printf("Gotten Gateway IP: %s\n", cfg.Gateway.String())
 
-	// _, err = pkg.ListIPs(cfg.CIDR, cfg.NetIfi)
-	activeIPs, err := pkg.HighListIPs(cfg.CIDR, cfg.NetIfi)
-	if err != nil || activeIPs == nil {
-		log.Fatalf("Error in the ListIPs func: %s\n", err)
+	// activeIPs, err := pkg.ListIPs(cfg.CIDR, cfg.NetIfi)
+	// // // activeIPs, err := pkg.HighListIPs(cfg.CIDR, cfg.NetIfi)
+	// if err != nil {
+	// 	log.Fatalf("Error in the ListIPs func: %s\n", err)
+	// } else if activeIPs == nil {
+	// 	log.Fatalf("No active IP addresses were found\n")
+	// }
+
+	activeIPs, err := ipkg.HighListIPs(cfg.CIDR, cfg.NetIfi, cfg.LocalIP)
+	if err != nil {
+		log.Fatalf("Error somewhere in HighListIPs: %s\n", err)
+	} else if activeIPs == nil {
+		log.Fatalf("No active IP addresses were found\n")
 	}
+
+	fmt.Println("Active IPs:", activeIPs)
 
 	// TODO:
 	// Now I could print out the active IP addresses and let the attacker choose which one to intercept

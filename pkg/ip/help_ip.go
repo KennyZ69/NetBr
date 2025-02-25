@@ -1,94 +1,20 @@
-package pkg
+package ip
 
 import (
 	"bufio"
 	"bytes"
 	"encoding/binary"
 	"fmt"
-	"log"
 	"net"
 	"strconv"
 	"strings"
-	"time"
 
-	netlibk "github.com/KennyZ69/netlibK"
+	"github.com/KennyZ69/netBr/pkg"
 )
 
 const (
 	RouteFile = "/proc/net/route"
 )
-
-func ICMPClient(ifi *net.Interface) (*netlibk.Client, error) {
-	c, err := netlibk.ICMPSetClient(ifi)
-	if err != nil {
-		return c, err
-	}
-	defer c.Close()
-
-	if err = c.Conn.SetDeadline(time.Now().Add(time.Duration(2))); err != nil {
-		return c, err
-	}
-
-	return c, nil
-}
-
-// TODO:
-// I need to print out the list of active IP adresses
-// and let the user type in one of them to attack
-
-func ListIPs(cidr *net.IPNet, ifi *net.Interface) ([]net.IP, error) {
-	c, err := ICMPClient(ifi)
-	if err != nil {
-		return nil, err
-	}
-
-	var activeIPs []net.IP
-	var count int = 0
-
-	for ip := cidr.IP.Mask(cidr.Mask); cidr.Contains(ip); incIP(ip) {
-		if ip.Equal(cidr.IP) {
-			continue
-		}
-
-		_, active, err := c.Ping(ip, []byte("Hello victim!"))
-		if err != nil {
-			continue
-		}
-
-		if active {
-			count++
-			activeIPs = append(activeIPs, ip)
-			log.Printf("Found active IP: %s (%d)\n", ip.String(), count)
-		}
-	}
-
-	return activeIPs, nil
-}
-
-func HighListIPs(cidr *net.IPNet, ifi *net.Interface) ([]net.IP, error) {
-	var activeIPs []net.IP
-
-	for ip := cidr.IP.Mask(cidr.Mask); cidr.Contains(ip); incIP(ip) {
-		if ip.Equal(cidr.IP) {
-			continue
-		}
-		_, active, err := netlibk.HigherLvlPing(ip, []byte("Hello victim!"), time.Duration(2))
-		if err != nil {
-			continue
-		}
-
-		if active {
-			activeIPs = append(activeIPs, ip)
-			log.Printf("Found active IP: %s\n", ip.String())
-		}
-	}
-
-	if len(activeIPs) == 0 {
-		return nil, fmt.Errorf("No active IPs found on the network\n")
-	}
-
-	return activeIPs, nil
-}
 
 // GetIpRange iterates over ip addresses and returns the local one along with the CIDR notation
 func GetIpRange(ifi *net.Interface) (string, *net.IPNet, error) {
@@ -110,7 +36,7 @@ func GetIpRange(ifi *net.Interface) (string, *net.IPNet, error) {
 // GetGateway returns the ip of the gateway as a string (from /proc/net/route file) and error
 func GetGateway() (net.IP, error) {
 	// fmt.Println("Getting gateway")
-	bytes, err := readFile(RouteFile)
+	bytes, err := pkg.ReadFile(RouteFile)
 	if err != nil {
 		return nil, err
 	}
@@ -167,4 +93,13 @@ func parseGatewayIPBytes(gateway string) (net.IP, error) {
 	ip := make(net.IP, 4)
 	binary.LittleEndian.PutUint32(ip, uint32(ip32))
 	return ip, nil
+}
+
+func IncIP(ip net.IP) {
+	for i := len(ip) - 1; i >= 0; i-- {
+		ip[i]++
+		if ip[i] > 0 {
+			break
+		}
+	}
 }

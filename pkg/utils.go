@@ -18,16 +18,7 @@ func netipIP(ip *net.IP) (*netip.Addr, error) {
 	return &ret, nil
 }
 
-func incIP(ip net.IP) {
-	for i := len(ip) - 1; i >= 0; i-- {
-		ip[i]++
-		if ip[i] > 0 {
-			break
-		}
-	}
-}
-
-func readFile(file string) ([]byte, error) {
+func ReadFile(file string) ([]byte, error) {
 	f, err := os.Open(file) // this opens the file just for reading
 	if err != nil {
 		return nil, err
@@ -40,4 +31,13 @@ func readFile(file string) ([]byte, error) {
 	}
 
 	return bytes, nil
+}
+
+func IncIP(ip net.IP) {
+	for i := len(ip) - 1; i >= 0; i-- {
+		ip[i]++
+		if ip[i] > 0 {
+			break
+		}
+	}
 }

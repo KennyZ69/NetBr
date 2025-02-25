@@ -6,6 +6,7 @@ import (
 	"net"
 	"time"
 
+	// ipkg "github.com/KennyZ69/pkg/ip"
 	"github.com/mdlayher/arp"
 )
 
@@ -26,7 +27,8 @@ func ArpScan(ifi *net.Interface, ipNet *net.IPNet) (map[string]string, error) {
 	// make a map for the mac : ip relations
 	ret := make(map[string]string)
 
-	for ip := ipNet.IP.Mask(ipNet.Mask); ipNet.Contains(ip); incIP(ip) {
+	// for ip := ipNet.IP.Mask(ipNet.Mask); ipNet.Contains(ip); ipkg.IncIP(ip) {
+	for ip := ipNet.IP.Mask(ipNet.Mask); ipNet.Contains(ip); IncIP(ip) {
 		if ip.Equal(ipNet.IP) {
 			continue
 		}
