@@ -3,7 +3,9 @@ package ip
 import (
 	"fmt"
 	"log"
+	"math/rand"
 	"net"
+	"sync"
 	"time"
 
 	"golang.org/x/net/icmp"
@@ -13,82 +15,101 @@ import (
 func fallBackPing(srcIP, targetIP string, timeout time.Duration) (bool, error) {
 	conn, err := icmp.ListenPacket("ip4:icmp", srcIP)
 	if err != nil {
-		return false, fmt.Errorf("error creating ICMP connection: %v", err)
+		return false, fmt.Errorf("Error creating ICMP connection: %s", err)
 	}
 	defer conn.Close()
 
 	dst, err := net.ResolveIPAddr("ip4", targetIP)
 	if err != nil {
-		return false, fmt.Errorf("error resolving target address: %v", err)
+		return false, fmt.Errorf("Error resolving target: %s", err)
 	}
 
-	// Create an ICMP echo request message
+	randID := rand.Intn(65535)
+	randSeq := rand.Intn(65535)
+
 	msg := icmp.Message{
 		Type: ipv4.ICMPTypeEcho, Code: 0,
-		Body: &icmp.Echo{ID: 1, Seq: 1, Data: []byte("PING")},
+		Body: &icmp.Echo{ID: randID, Seq: randSeq, Data: []byte("Hello my precious!")},
 	}
 
 	msgBytes, err := msg.Marshal(nil)
 	if err != nil {
-		return false, fmt.Errorf("error marshaling ICMP message: %v", err)
+		return false, fmt.Errorf("Error marshaling ICMP message: %s", err)
 	}
-
-	start := time.Now()
 
 	_, err = conn.WriteTo(msgBytes, dst)
 	if err != nil {
-		return false, fmt.Errorf("error sending ICMP request: %v", err)
+		return false, fmt.Errorf("Error sending ICMP request: %s", err)
 	}
 
 	err = conn.SetReadDeadline(time.Now().Add(timeout))
 	if err != nil {
-		return false, fmt.Errorf("error setting read deadline: %v", err)
+		return false, fmt.Errorf("Error setting deadline: %s", err)
 	}
 
-	reply := make([]byte, 1500)
+	reply := make([]byte, 2048)
 
 	n, peer, err := conn.ReadFrom(reply)
 	if err != nil {
 		return false, nil
 	}
 
-	duration := time.Since(start)
-
 	receivedMsg, err := icmp.ParseMessage(1, reply[:n])
 	if err != nil {
-		return false, fmt.Errorf("error parsing ICMP response: %v", err)
+		return false, fmt.Errorf("Error parsing ICMP response: %s", err)
 	}
 
-	if receivedMsg.Type == ipv4.ICMPTypeEchoReply {
-		fmt.Printf("Received reply from %s in %v\n", peer, duration)
-		return true, nil
+	if echoRep, ok := receivedMsg.Body.(*icmp.Echo); ok {
+		if echoRep.ID == randID && echoRep.Seq == randSeq && peer.String() == targetIP {
+			return true, nil
+		}
 	}
 
 	return false, nil
 }
 
 func fallBackPinging(cidr *net.IPNet, srcIP string) []net.IP {
-	log.Println("Moving to fallback ping functionality")
 	var activeIPs []net.IP
 	var count = 0
+	var wg sync.WaitGroup
+	chanIP := make(chan net.IP)
 
 	for ip := cidr.IP.Mask(cidr.Mask); cidr.Contains(ip); IncIP(ip) {
-		if ip.Equal(cidr.IP) {
-			continue
-		}
 
-		log.Println("Pinging", ip.String())
+		ipCopy := make(net.IP, len(ip))
+		copy(ipCopy, ip)
 
-		active, err := fallBackPing(srcIP, ip.String(), time.Duration(time.Second*2))
-		if err != nil {
-			continue
-		}
+		wg.Add(1)
 
-		if active {
-			count++
-			activeIPs = append(activeIPs, ip)
-			log.Printf("Found active IP: %s (%d)\n", ip.String(), count)
-		}
+		go func(targetIP net.IP) {
+
+			defer wg.Done()
+
+			if targetIP.Equal(cidr.IP) {
+				return
+			}
+
+			active, err := fallBackPing(srcIP, targetIP.String(), 2*time.Second)
+			if err != nil {
+				return
+			}
+
+			if active {
+				count++
+				chanIP <- targetIP
+				log.Printf("Found active IP: %s (%d)\n", targetIP.String(), count)
+			}
+
+		}(ipCopy)
+	}
+
+	go func() {
+		wg.Wait()
+		close(chanIP)
+	}()
+
+	for ip := range chanIP {
+		activeIPs = append(activeIPs, ip)
 	}
 
 	return activeIPs

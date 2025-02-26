@@ -16,7 +16,7 @@ func HighListIPs(cidr *net.IPNet, ifi *net.Interface, srcIP string) ([]net.IP, e
 			continue
 		}
 
-		log.Printf("Pinging %s\n", ip.String())
+		// log.Printf("Pinging %s\n", ip.String())
 		_, active, err := netlibk.HigherLvlPing(ip, []byte("Hello victim!"), time.Duration(2))
 		if err != nil {
 			continue
@@ -29,7 +29,8 @@ func HighListIPs(cidr *net.IPNet, ifi *net.Interface, srcIP string) ([]net.IP, e
 	}
 
 	if len(activeIPs) < 1 {
-		fallBackPinging(cidr, srcIP)
+		log.Printf("Had a problem detecting active hosts using netlibK\nMoving on the builtin libraries (fallback)\n")
+		activeIPs = fallBackPinging(cidr, srcIP)
 	}
 
 	return activeIPs, nil
