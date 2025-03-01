@@ -17,7 +17,7 @@ type Config struct {
 	LocalIP string         `json:"local_ip"`  // users (attackers) local IP
 	Mac     string         `json:"mac"`       // users (attackers) actual MAC address
 	CIDR    *net.IPNet     `json:"cidr"`      // the IP range on network
-	Gateway net.IP         `json:"gateway"`   // the gateway IP
+	Gateway string         `json:"gateway"`   // the gateway IP
 
 	// may add more fields throughout the development process
 
@@ -52,7 +52,6 @@ func LoadConf() (*Config, error) {
 	path := confPath()
 
 	_, err := os.Stat(path)
-	// fmt.Println("Config exists: ", err == nil)
 	if err != nil {
 		return nil, fmt.Errorf("Config file does not exist\n")
 	}
