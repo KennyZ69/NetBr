@@ -5,18 +5,19 @@ import (
 	"net"
 	"time"
 
+	"github.com/KennyZ69/netBr/pkg"
 	netlibk "github.com/KennyZ69/netlibK"
 )
 
-func HighListIPs(cidr *net.IPNet, ifi *net.Interface, srcIP string) ([]net.IP, error) {
+// func HighListIPs(cidr *net.IPNet, ifi *net.Interface, srcIP string) ([]net.IP, error) {
+func HighListIPs(cfg pkg.Config) ([]net.IP, error) {
 	var activeIPs []net.IP
 
-	for ip := cidr.IP.Mask(cidr.Mask); cidr.Contains(ip); IncIP(ip) {
-		if ip.Equal(cidr.IP) {
+	for ip := cfg.CIDR.IP.Mask(cfg.CIDR.Mask); cfg.CIDR.Contains(ip); IncIP(ip) {
+		if ip.Equal(cfg.CIDR.IP) || ip.String() == cfg.Gateway {
 			continue
 		}
 
-		// log.Printf("Pinging %s\n", ip.String())
 		_, active, err := netlibk.HigherLvlPing(ip, []byte("Hello victim!"), time.Duration(2))
 		if err != nil {
 			continue
@@ -30,7 +31,7 @@ func HighListIPs(cidr *net.IPNet, ifi *net.Interface, srcIP string) ([]net.IP, e
 
 	if len(activeIPs) < 1 {
 		log.Printf("Had a problem detecting active hosts using netlibK\nMoving on the builtin libraries (fallback)\n")
-		activeIPs = fallBackPinging(cidr, srcIP)
+		activeIPs = fallBackPinging(cfg.CIDR, cfg.LocalIP)
 	}
 
 	return activeIPs, nil

@@ -67,7 +67,8 @@ func main() {
 		log.Fatalf("Error enabling packet forwarding: %s\n", err)
 	}
 
-	activeIPs, err := ipkg.HighListIPs(cfg.CIDR, cfg.NetIfi, cfg.LocalIP)
+	// activeIPs, err := ipkg.HighListIPs(cfg.CIDR, cfg.NetIfi, cfg.LocalIP)
+	activeIPs, err := ipkg.HighListIPs(*cfg)
 	if err != nil {
 		log.Fatalf("Error somewhere in HighListIPs: %s\n", err)
 	} else if activeIPs == nil {
@@ -76,11 +77,7 @@ func main() {
 
 	fmt.Println("Active IPs:", activeIPs)
 
-	// TODO:
-	// Now I could print out the active IP addresses and let the attacker choose which one to intercept
-
 	targetIP := chooseVictimIP(activeIPs)
-	// fmt.Printf("Target: %s\n", target.String())
 
 	gatewayMAC, err := pkg.GetMacFromIP(net.ParseIP(cfg.Gateway), cfg.NetIfi)
 	if err != nil {

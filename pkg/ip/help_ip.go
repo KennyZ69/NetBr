@@ -24,13 +24,41 @@ func GetIpRange(ifi *net.Interface) (string, *net.IPNet, error) {
 	}
 
 	for _, addr := range addrs {
-		if ipNet, ok := addr.(*net.IPNet); ok && !ipNet.IP.IsLoopback() {
-			if ipNet.IP.To4() != nil {
-				return ipNet.IP.String(), ipNet, nil
-			}
+		ip, err := getLocalIP(addr)
+		if err != nil {
+			continue
 		}
+		net, err := getLocalCIDR(addr)
+		if err != nil {
+			continue
+		}
+		return ip, net, nil
+
 	}
 	return "", nil, fmt.Errorf("Did not find any ip address\n")
+}
+
+func getLocalIP(addr net.Addr) (string, error) {
+	var ip net.IP
+
+	switch t := addr.(type) {
+	case *net.IPNet:
+		ip = t.IP
+	case *net.IPAddr:
+		ip = t.IP
+	}
+
+	if ip != nil && ip.To4() != nil && !ip.IsLoopback() {
+		return ip.String(), nil
+	}
+
+	return "", fmt.Errorf("No valid IPv4 could be found as local")
+}
+func getLocalCIDR(addr net.Addr) (*net.IPNet, error) {
+	if ipNet, ok := addr.(*net.IPNet); ok && !ipNet.IP.IsLoopback() && ipNet.IP.To4() != nil {
+		return ipNet, nil
+	}
+	return nil, fmt.Errorf("No valid IPNet could be found")
 }
 
 // GetGateway returns the ip of the gateway as a string (from /proc/net/route file) and error
