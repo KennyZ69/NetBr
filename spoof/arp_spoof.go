@@ -11,6 +11,7 @@ import (
 
 // func SpoofARP(ifi *net.Interface, victimIP, gatewayIP net.IP, attackMAC, victimMAC net.HardwareAddr) error {
 func SpoofARP(ifi *net.Interface, victim, gateway net.IP, attackMAC, victimMAC, gatewayMAC net.HardwareAddr) error {
+	log.Println("Starting up the arp poison...")
 	c, err := arp.Dial(ifi)
 	if err != nil {
 		return err
